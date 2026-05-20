@@ -1,0 +1,187 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ library.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header with Gradient -->
+    <header>
+        <h1>📚 {{ library.name }}</h1>
+        <p>Inventory • Borrowing • Returning</p>
+    </header>
+
+    <!-- Alerts -->
+    {% if message %}
+        <div class="alert success">✓ {{ message }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="alert error">✖ {{ error }}</div>
+    {% endif %}
+
+    <div class="main-layout">
+
+        <!-- ==================== FEATURE 1: BOOK INVENTORY ==================== -->
+        <div class="card section-inventory">
+            <h2>Book Inventory</h2>
+
+            <!-- Add Book Form (Collapsible) -->
+            <details>
+                <summary style="cursor:pointer; color:var(--primary-blue); font-weight:bold; margin-bottom:15px;">+ Add New Book to Inventory</summary>
+                <form action="/inventory/add" method="POST" class="form-grid" style="background:#f9f9f9; padding:15px; border-radius:8px;">
+                    <input type="text" name="title" placeholder="Book Title" required>
+                    <input type="text" name="author" placeholder="Author" required>
+                    <input type="text" name="publication" placeholder="Publication" required>
+                    <input type="number" name="year" placeholder="Year" required>
+                    <input type="text" name="isbn" placeholder="ISBN" required>
+                    <input type="text" name="category" placeholder="Category (e.g., Fiction)" required>
+                    <input type="number" name="copies" value="1" min="1" placeholder="Copies">
+                    <button type="submit" class="btn primary">Add Book</button>
+                </form>
+            </details>
+
+            <!-- Search Bar -->
+            <div class="search-bar">
+                <form action="/search" method="GET">
+                    <select name="field" style="width:auto;">
+                        <option value="title">Title</option>
+                        <option value="author">Author</option>
+                    </select>
+                    <input type="text" name="q" placeholder="Search inventory..." value="{{ search_query or '' }}" style="flex-grow:1;">
+                    <button type="submit">Search</button>
+                </form>
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Book Details</th>
+                            <th>Publication Info</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for book in books %}
+                        <tr>
+                            <td>
+                                <strong style="color:var(--text-dark); font-size:1.1rem;">{{ book.title }}</strong><br>
+                                <span style="color:var(--primary-blue);">{{ book.author }}</span>
+                            </td>
+                            <td>
+                                {{ book.publication }}<br>
+                                <small style="color:#999;">{{ book.year }}</small>
+                            </td>
+                            <td>
+                                {% if book.available_copies > 0 %}
+                                    <span class="status available">{{ book.available_copies }} Available</span>
+                                {% else %}
+                                    <span class="status unavailable">All Borrowed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex; gap:5px;">
+                                    {% if book.available_copies > 0 %}
+                                        <a href="/?borrow_isbn={{ book.isbn }}" class="btn success sm">Borrow</a>
+                                    {% else %}
+                                        <button class="btn sm" disabled style="background:#eee; cursor:not-allowed;">Unavailable</button>
+                                    {% endif %}
+                                    <a href="/inventory/remove/{{ book.isbn }}" class="btn danger sm" onclick="return confirm('Remove this book?')">Delete</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" style="text-align:center; padding:30px; color:#999;">
+                                No books in inventory yet. Click "+ Add New Book" above to start.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ==================== SIDEBAR: BORROWING & RETURNING ==================== -->
+        <div class="sidebar">
+
+            <!-- FEATURE 2: BORROWING -->
+            <div class="card section-borrow">
+                <h2>Book Borrowing</h2>
+
+                {% if selected_book %}
+                    <!-- Borrowing Form Active -->
+                    <div class="selected-book">
+                        <p>📖 <strong>{{ selected_book.title }}</strong></p>
+                        <form action="/borrow" method="POST">
+                            <input type="hidden" name="isbn" value="{{ selected_book.isbn }}">
+                            <label>Borrower Name</label>
+                            <input type="text" name="borrower_name" placeholder="Who is borrowing?" required>
+                            <label>Borrower ID</label>
+                            <input type="text" name="borrower_id" placeholder="Student/Staff ID" required>
+
+                            <!-- CHANGED: Dropdown replaced with Date Picker -->
+                            <label>Return Date</label>
+                            <input type="date" name="due_date" min="{{ today_date }}" required>
+
+                            <button type="submit" class="btn primary full" style="margin-top:10px;">Confirm Borrow</button>
+                        </form>
+                    </div>
+                {% else %}
+                    <!-- Prompt to select book -->
+                    <div class="instruction">
+                        👈 Select a book from the Inventory list on the left to begin the borrowing process.
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- FEATURE 3: INPUT & RETURNING -->
+            <div class="card section-return">
+                <h2>Input & Returning</h2>
+
+                <h3>Currently Borrowed</h3>
+                <div class="list-group">
+                    {% for record in active_borrows %}
+                    <div class="list-item" style="border-left-color: var(--accent-pink);">
+                        <div class="info">
+                            <strong>{{ record.book_title }}</strong><br>
+                            <small>Borrower: {{ record.borrower_name }}</small><br>
+                            <small>Due: {{ record.due_date.strftime('%Y-%m-%d') }}</small>
+                        </div>
+                        <a href="/return/{{ record.record_id }}" class="btn warning sm" onclick="return confirm('Mark as returned?')">Return</a>
+                    </div>
+                    {% else %}
+                    <p class="empty-text">No books currently borrowed.</p>
+                    {% endfor %}
+                </div>
+
+                <h3 style="margin-top:25px;">Returned History</h3>
+                <div class="list-group">
+                    {% for record in history %}
+                    <div class="list-item" style="border-left-color: var(--primary-blue); background: #fff;">
+                        <div class="info">
+                            <strong>{{ record.book_title }}</strong><br>
+                            <small>Borrower: {{ record.borrower_name }}</small>
+                        </div>
+                        <span class="status returned">Returned</span>
+                    </div>
+                    {% else %}
+                    <p class="empty-text">No return history.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
