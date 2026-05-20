@@ -1,0 +1,264 @@
+/* static/style.css */
+:root {
+    /* Primary Colors (Unmixed) */
+    --primary-blue: #4FC3F7;      /* Bright Light Blue */
+    --dark-blue: #0288D1;         /* Darker Blue for text/borders */
+    --bg-blue: #E1F5FE;           /* Very Light Blue Background */
+
+    --primary-pink: #F06292;      /* Bright Pink */
+    --dark-pink: #C2185B;         /* Darker Pink for text/borders */
+    --bg-pink: #FCE4EC;           /* Very Light Pink Background */
+
+    /* Neutrals */
+    --white: #FFFFFF;
+    --text-dark: #37474F;
+    --text-light: #78909C;
+    --border: #ECEFF1;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+body {
+    background-color: #FAFAFA; /* Neutral background */
+    color: var(--text-dark);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container { max-width: 1200px; margin: 0 auto; }
+
+/* --- Header (Solid Light Blue) --- */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 25px;
+    background-color: var(--primary-blue); /* Solid Blue */
+    border-radius: 15px;
+    color: white;
+    box-shadow: 0 4px 15px rgba(79, 195, 247, 0.3);
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 5px;
+    color: white;
+}
+
+header p { color: #ffffff; font-size: 1.1rem; opacity: 0.9; }
+
+/* --- Alerts --- */
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 500;
+    border-left: 5px solid;
+}
+.alert.success {
+    background: var(--bg-blue);
+    color: var(--dark-blue);
+    border-color: var(--primary-blue);
+}
+.alert.error {
+    background: var(--bg-pink);
+    color: var(--dark-pink);
+    border-color: var(--primary-pink);
+}
+
+/* --- Main Layout Grid --- */
+.main-layout {
+    display: grid;
+    grid-template-columns: 2.5fr 1.5fr;
+    gap: 25px;
+}
+
+@media (max-width: 900px) {
+    .main-layout { grid-template-columns: 1fr; }
+}
+
+/* --- General Card Style --- */
+.card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+}
+
+/* --- FEATURE 1: INVENTORY (BLUE THEME) --- */
+.section-inventory {
+    border-top: 6px solid var(--primary-blue);
+}
+
+.section-inventory h2 {
+    color: var(--dark-blue);
+    border-bottom: 2px solid var(--bg-blue);
+}
+
+.section-inventory table th {
+    background-color: var(--bg-blue);
+    color: var(--dark-blue);
+}
+
+.section-inventory table tr:hover {
+    background-color: var(--bg-blue);
+}
+
+/* Blue Buttons for Inventory */
+.section-inventory .btn.primary {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+.section-inventory .btn.primary:hover {
+    background-color: var(--dark-blue);
+}
+
+.section-inventory .btn.success {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+.section-inventory .btn.success:hover {
+    background-color: var(--dark-blue);
+}
+
+/* Search Bar (Blue) */
+.search-bar {
+    margin-bottom: 20px;
+    background: var(--bg-blue);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--primary-blue);
+}
+
+.search-bar button {
+    background: var(--dark-blue);
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* --- SIDEBAR: BORROWING & RETURNING (PINK THEME) --- */
+.section-borrow, .section-return {
+    border-top: 6px solid var(--primary-pink);
+}
+
+.sidebar h2 {
+    color: var(--dark-pink);
+    border-bottom: 2px solid var(--bg-pink);
+}
+
+.sidebar h3 {
+    color: var(--dark-pink);
+}
+
+/* Pink Forms */
+.selected-book {
+    background: var(--bg-pink);
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid var(--primary-pink);
+}
+
+.selected-book p { color: var(--dark-pink); }
+
+/* Pink Buttons */
+.sidebar .btn.primary {
+    background-color: var(--primary-pink);
+    color: white;
+}
+
+.sidebar .btn.primary:hover {
+    background-color: var(--dark-pink);
+}
+
+/* Status Badges */
+.status {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status.available {
+    background: var(--bg-blue);
+    color: var(--dark-blue);
+}
+
+.status.unavailable {
+    background: var(--bg-pink);
+    color: var(--dark-pink);
+}
+
+.status.returned {
+    background: #F3E5F5;
+    color: #7B1FA2;
+}
+
+/* List Items */
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-radius: 6px;
+    background: #fafafa;
+    margin-bottom: 8px;
+    border-left: 4px solid #ddd;
+}
+
+.list-item .info small { color: var(--text-light); font-size: 0.85rem; display: block; margin-top: 2px; }
+
+/* Instruction Box */
+.instruction {
+    color: var(--text-light);
+    font-style: italic;
+    text-align: center;
+    padding: 30px;
+    background: var(--bg-pink);
+    border-radius: 8px;
+    border: 1px dashed var(--primary-pink);
+}
+
+/* Forms */
+input, select {
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    width: 100%;
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-blue); /* Default focus blue */
+}
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+
+/* Buttons */
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn.warning { background: #FFB74D; color: white; }
+.btn.danger { background: #EF5350; color: white; }
+.btn.sm { padding: 5px 12px; font-size: 0.85rem; }
+.btn.full { width: 100%; padding: 12px; font-size: 1rem; }
+
+.empty-text { text-align: center; color: #B0BEC5; padding: 20px; font-style: italic; }
