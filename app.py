@@ -1,0 +1,123 @@
+# app.py
+from flask import Flask, render_template, request, redirect, url_for
+from datetime import datetime
+from library_system import LibraryManager
+from strategies import AuthorSearchStrategy, TitleSearchStrategy
+
+app = Flask(__name__)
+
+# Initialize Library System
+library = LibraryManager("Library Borrowing & Returning Books")
+
+# Pre-populate sample data ONLY if library is empty (First Run)
+if len(library.get_all_books()) == 0:
+    print("No data found. Populating sample data...")
+    library.add_book("978-0134685991", "The Python Programming Language", "Guido van Rossum", "Pearson", 2020,
+                     "Programming", 5)
+    library.add_book("978-1593279288", "Python Crash Course", "Eric Matthes", "No Starch Press", 2019, "Programming", 3)
+    library.add_book("978-1491912058", "Fluent Python", "Luciano Ramalho", "O'Reilly Media", 2022, "Programming", 2)
+
+
+@app.route('/')
+def index():
+    stats = library.get_stats()
+    active_borrows = library.get_active_borrows()
+    history = library.get_return_history()[-5:]
+
+    selected_isbn = request.args.get('borrow_isbn')
+    selected_book = library.books.get(selected_isbn) if selected_isbn else None
+
+    # Get today's date for the date picker min attribute
+    today_date = datetime.now().strftime('%Y-%m-%d')
+
+    return render_template('index.html',
+                           library=library,
+                           stats=stats,
+                           books=library.get_all_books(),
+                           active_borrows=active_borrows,
+                           history=history,
+                           selected_book=selected_book,
+                           today_date=today_date,
+                           message=request.args.get('msg'),
+                           error=request.args.get('err'))
+
+
+@app.route('/inventory/add', methods=['POST'])
+def add_book():
+    success, msg = library.add_book(
+        request.form['isbn'],
+        request.form['title'],
+        request.form['author'],
+        request.form['publication'],
+        int(request.form['year']),
+        request.form['category'],
+        int(request.form.get('copies', 1))
+    )
+    return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
+
+
+@app.route('/inventory/remove/<isbn>')
+def remove_book(isbn):
+    success, msg = library.remove_book(isbn)
+    return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
+
+
+@app.route('/search')
+def search():
+    query = request.args.get('q', '')
+    field = request.args.get('field', 'title')
+
+    if field == 'author':
+        library.set_search_strategy(AuthorSearchStrategy())
+    else:
+        library.set_search_strategy(TitleSearchStrategy())
+
+    results = library.search_books(query)
+
+    return render_template('index.html',
+                           library=library,
+                           stats=library.get_stats(),
+                           books=results,
+                           active_borrows=library.get_active_borrows(),
+                           history=library.get_return_history(),
+                           selected_book=None,
+                           today_date=datetime.now().strftime('%Y-%m-%d'),
+                           search_query=query)
+
+
+@app.route('/borrow', methods=['POST'])
+def borrow_book():
+    isbn = request.form['isbn']
+    name = request.form['borrower_name']
+    bid = request.form['borrower_id']
+
+    # --- NEW LOGIC: Calculate days from selected date ---
+    due_date_str = request.form.get('due_date')
+    days = 14  # Default fallback
+
+    if due_date_str:
+        try:
+            due_date_obj = datetime.strptime(due_date_str, '%Y-%m-%d')
+            now = datetime.now()
+            # Calculate difference in days
+            delta = due_date_obj - now
+            days = delta.days
+            if days < 1:
+                days = 1  # Minimum 1 day if date is today or past
+        except ValueError:
+            pass  # Use default if date is invalid
+    # ---------------------------------------------------
+
+    success, msg = library.borrow_book(isbn, name, bid, days)
+    return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
+
+
+@app.route('/return/<record_id>')
+def return_book(record_id):
+    success, msg, fine = library.return_book(record_id)
+    return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
+
+
+if __name__ == '__main__':
+    print("Server running on http://127.0.0.1:5000")
+    app.run(debug=True)
