@@ -16,9 +16,9 @@ A comprehensive library management system that streamlines the process of borrow
 
 ## 💻 Tech Stack
 
-- **Backend:** Python (56.8%)
-- **Frontend:** HTML (25.9%)
-- **Styling:** CSS (17.3%)
+- **Backend:** Python
+- **Frontend:** HTML 
+- **Styling:** CSS 
 
 ## 📋 Prerequisites
 
