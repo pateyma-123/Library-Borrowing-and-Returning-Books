@@ -1,3 +1,4 @@
+# app.py
 """
 Flask Application for Library Management System.
 
@@ -32,9 +33,6 @@ def index():
 
     Displays book inventory, active borrows, and return history.
     Handles selection of books for borrowing and displays flash messages.
-
-    Returns:
-        str: Rendered HTML content for index.html.
     """
     stats = library.get_stats()
     active_borrows = library.get_active_borrows()
@@ -65,9 +63,6 @@ def add_book():
 
     Extracts book details from the form and calls the library manager.
     Redirects back to index with a success or error message.
-
-    Returns:
-        redirect: A Flask redirect response to the index page.
     """
     success, msg = library.add_book(
         request.form['isbn'],
@@ -86,11 +81,7 @@ def remove_book(isbn):
     """
     Handle request to remove a book from inventory by ISBN.
 
-    Args:
-        isbn (str): The ISBN of the book to remove.
-
-    Returns:
-        redirect: A Flask redirect response to the index page.
+    Redirects back to index with a status message.
     """
     success, msg = library.remove_book(isbn)
     return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
@@ -103,9 +94,6 @@ def search():
 
     Determines the search field (title or author) and applies the
     corresponding search strategy. Renders index.html with filtered results.
-
-    Returns:
-        str: Rendered HTML content for index.html with search results.
     """
     query = request.args.get('q', '')
     field = request.args.get('field', 'title')
@@ -135,13 +123,21 @@ def borrow_book():
 
     Validates the due date selected by the user, calculates the loan duration,
     and registers the borrow record in the system.
-
-    Returns:
-        redirect: A Flask redirect response to the index page.
     """
     isbn = request.form['isbn']
     name = request.form['borrower_name']
     bid = request.form['borrower_id']
 
     # Calculate days from selected date
-    due_date_str 
+    due_date_str = request.form.get('due_date')
+    days = 14  # Default fallback
+
+    if due_date_str:
+        try:
+            due_date_obj = datetime.strptime(due_date_str, '%Y-%m-%d')
+            now = datetime.now()
+            # Calculate difference in days
+            delta = due_date_obj - now
+            days = delta.days
+            if days < 1:
+                days = 1  # Minimum 1 day 
