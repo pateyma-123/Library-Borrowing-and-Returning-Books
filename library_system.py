@@ -18,27 +18,21 @@ class LibraryManager:
     """
     Manages the library's state, including books and borrowing records.
 
-    The LibraryManager acts as the central controller for the application.
-    It handles data persistence, enforces business rules for borrowing/returning,
-    and allows for strategy injection for search and fine calculation.
-
     Attributes:
-        name (str): The name of the library instance.
-        books (Dict[str, Book]): A mapping of ISBN strings to Book objects.
-        records (Dict[str, BorrowRecord]): A mapping of Record IDs to BorrowRecord objects.
-        books_file (str): The file path for book inventory persistence.
-        history_file (str): The file path for transaction history persistence.
+        name (str): Name of the library.
+        books (Dict[str, Book]): Dictionary of ISBN to Book objects.
+        records (Dict[str, BorrowRecord]): Dictionary of Record IDs to BorrowRecord objects.
     """
 
     def __init__(self, library_name: str = "Central Library", books_file: str = "books.csv",
                  history_file: str = "history.csv"):
         """
-        Initialize the LibraryManager with configuration and load data.
+        Initialize the LibraryManager.
 
         Args:
-            library_name (str): The display name of the library. Defaults to "Central Library".
-            books_file (str): Path to the CSV file for book storage. Defaults to "books.csv".
-            history_file (str): Path to the CSV file for borrow records. Defaults to "history.csv".
+            library_name (str): Name of the library.
+            books_file (str): Filename for storing book data.
+            history_file (str): Filename for storing transaction history.
         """
         self.name = library_name
         self.books: Dict[str, Book] = {}
@@ -59,13 +53,7 @@ class LibraryManager:
     # --- Internal CSV Methods ---
 
     def _load_data(self):
-        """
-        Load books and records from CSV files if they exist.
-
-        This method is called during initialization to restore state.
-        It reads 'books.csv' and 'history.csv' and populates the internal
-        dictionaries. It also adjusts the record_counter to prevent ID collisions.
-        """
+        """Load books and records from CSV files if they exist."""
         # Load Books
         if os.path.exists(self.books_file):
             with open(self.books_file, mode='r', newline='', encoding='utf-8') as file:
@@ -83,19 +71,12 @@ class LibraryManager:
                     self.records[record.record_id] = record
 
                     # Update counter to prevent duplicate IDs
-                    try:
-                        record_num = int(record.record_id.replace("BR", ""))
-                        if record_num > self.record_counter:
-                            self.record_counter = record_num
-                    except ValueError:
-                        pass # Handle legacy or malformed IDs gracefully
+                    record_num = int(record.record_id.replace("BR", ""))
+                    if record_num > self.record_counter:
+                        self.record_counter = record_num
 
     def _save_books(self):
-        """
-        Persist the current book inventory to the CSV file.
-
-        Overwrites the existing books file with the current state of self.books.
-        """
+        """Save current book inventory to CSV."""
         with open(self.books_file, mode='w', newline='', encoding='utf-8') as file:
             fieldnames = ['isbn', 'title', 'author', 'publication', 'year', 'category', 'total_copies',
                           'available_copies']
@@ -105,11 +86,7 @@ class LibraryManager:
                 writer.writerow(book.to_dict())
 
     def _save_records(self):
-        """
-        Persist the current borrow records to the CSV file.
-
-        Overwrites the existing history file with the current state of self.records.
-        """
+        """Save current borrow records to CSV."""
         with open(self.history_file, mode='w', newline='', encoding='utf-8') as file:
             fieldnames = ['record_id', 'isbn', 'book_title', 'borrower_name', 'borrower_id', 'borrow_date', 'due_date',
                           'return_date', 'is_returned']
@@ -118,4 +95,33 @@ class LibraryManager:
             for record in self.records.values():
                 writer.writerow(record.to_dict())
 
-    # --- Strategy Se
+    # --- Strategy Setters ---
+    def set_fine_strategy(self, strategy: FineStrategy):
+        """Set the strategy for calculating fines."""
+        self._fine_strategy = strategy
+
+    def set_search_strategy(self, strategy: SearchStrategy):
+        """Set the strategy for searching books."""
+        self._search_strategy = strategy
+
+    # --- Feature 1: Book Inventory ---
+    def add_book(self, isbn: str, title: str, author: str, publication: str, year: int, category: str,
+                 copies: int = 1) -> Tuple[bool, str]:
+        """
+        Add a new book or update existing copies.
+
+        Returns:
+            Tuple[bool, str]: Success status and message.
+        """
+        if not all([isbn, title, author, publication, year]):
+            return False, "All fields are required."
+
+        if isbn in self.books:
+            self.books[isbn].total_copies += copies
+            self.books[isbn].available_copies += copies
+            self._save_books()
+            return True, f"Updated copies for '{title}'."
+
+        self.books[isbn] = Book(isbn, title, author, publication, year, category, copies, copies)
+        self._save_books()
+        return True, f"Book '{
