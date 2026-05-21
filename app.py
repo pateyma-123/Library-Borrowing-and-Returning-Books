@@ -1,4 +1,12 @@
 # app.py
+"""
+Flask Application for Library Management System.
+
+This module serves as the entry point for the web application.
+It defines routes for viewing inventory, adding/removing books,
+borrowing books, and processing returns.
+"""
+
 from flask import Flask, render_template, request, redirect, url_for
 from datetime import datetime
 from library_system import LibraryManager
@@ -20,6 +28,12 @@ if len(library.get_all_books()) == 0:
 
 @app.route('/')
 def index():
+    """
+    Render the main page.
+
+    Displays book inventory, active borrows, and return history.
+    Handles selection of books for borrowing and displays flash messages.
+    """
     stats = library.get_stats()
     active_borrows = library.get_active_borrows()
     history = library.get_return_history()[-5:]
@@ -44,6 +58,12 @@ def index():
 
 @app.route('/inventory/add', methods=['POST'])
 def add_book():
+    """
+    Handle POST request to add a new book to the inventory.
+
+    Extracts book details from the form and calls the library manager.
+    Redirects back to index with a success or error message.
+    """
     success, msg = library.add_book(
         request.form['isbn'],
         request.form['title'],
@@ -58,12 +78,23 @@ def add_book():
 
 @app.route('/inventory/remove/<isbn>')
 def remove_book(isbn):
+    """
+    Handle request to remove a book from inventory by ISBN.
+
+    Redirects back to index with a status message.
+    """
     success, msg = library.remove_book(isbn)
     return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
 
 
 @app.route('/search')
 def search():
+    """
+    Handle search requests.
+
+    Determines the search field (title or author) and applies the
+    corresponding search strategy. Renders index.html with filtered results.
+    """
     query = request.args.get('q', '')
     field = request.args.get('field', 'title')
 
@@ -87,11 +118,17 @@ def search():
 
 @app.route('/borrow', methods=['POST'])
 def borrow_book():
+    """
+    Process a book borrowing transaction.
+
+    Validates the due date selected by the user, calculates the loan duration,
+    and registers the borrow record in the system.
+    """
     isbn = request.form['isbn']
     name = request.form['borrower_name']
     bid = request.form['borrower_id']
 
-    # --- NEW LOGIC: Calculate days from selected date ---
+    # Calculate days from selected date
     due_date_str = request.form.get('due_date')
     days = 14  # Default fallback
 
@@ -106,7 +143,6 @@ def borrow_book():
                 days = 1  # Minimum 1 day if date is today or past
         except ValueError:
             pass  # Use default if date is invalid
-    # ---------------------------------------------------
 
     success, msg = library.borrow_book(isbn, name, bid, days)
     return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
@@ -114,6 +150,11 @@ def borrow_book():
 
 @app.route('/return/<record_id>')
 def return_book(record_id):
+    """
+    Process a book return transaction.
+
+    Marks the borrow record as returned and calculates any applicable fines.
+    """
     success, msg, fine = library.return_book(record_id)
     return redirect(url_for('index', msg=msg if success else None, err=msg if not success else None))
 
