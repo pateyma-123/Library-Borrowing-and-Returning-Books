@@ -1,4 +1,11 @@
 # library_system.py
+"""
+Core Library Management Logic.
+
+This module contains the LibraryManager class which orchestrates
+book inventory, borrowing operations, and data persistence via CSV files.
+"""
+
 import csv
 import os
 from typing import Dict, List, Tuple, Optional
@@ -8,9 +15,25 @@ from strategies import FineStrategy, StandardFineStrategy, SearchStrategy, Title
 
 
 class LibraryManager:
-    # Updated Init to accept filenames
+    """
+    Manages the library's state, including books and borrowing records.
+
+    Attributes:
+        name (str): Name of the library.
+        books (Dict[str, Book]): Dictionary of ISBN to Book objects.
+        records (Dict[str, BorrowRecord]): Dictionary of Record IDs to BorrowRecord objects.
+    """
+
     def __init__(self, library_name: str = "Central Library", books_file: str = "books.csv",
                  history_file: str = "history.csv"):
+        """
+        Initialize the LibraryManager.
+
+        Args:
+            library_name (str): Name of the library.
+            books_file (str): Filename for storing book data.
+            history_file (str): Filename for storing transaction history.
+        """
         self.name = library_name
         self.books: Dict[str, Book] = {}
         self.records: Dict[str, BorrowRecord] = {}
@@ -74,45 +97,67 @@ class LibraryManager:
 
     # --- Strategy Setters ---
     def set_fine_strategy(self, strategy: FineStrategy):
+        """Set the strategy for calculating fines."""
         self._fine_strategy = strategy
 
     def set_search_strategy(self, strategy: SearchStrategy):
+        """Set the strategy for searching books."""
         self._search_strategy = strategy
 
     # --- Feature 1: Book Inventory ---
     def add_book(self, isbn: str, title: str, author: str, publication: str, year: int, category: str,
                  copies: int = 1) -> Tuple[bool, str]:
+        """
+        Add a new book or update existing copies.
+
+        Returns:
+            Tuple[bool, str]: Success status and message.
+        """
         if not all([isbn, title, author, publication, year]):
             return False, "All fields are required."
 
         if isbn in self.books:
             self.books[isbn].total_copies += copies
             self.books[isbn].available_copies += copies
-            self._save_books()  # SAVE CHANGES
+            self._save_books()
             return True, f"Updated copies for '{title}'."
 
         self.books[isbn] = Book(isbn, title, author, publication, year, category, copies, copies)
-        self._save_books()  # SAVE CHANGES
+        self._save_books()
         return True, f"Book '{title}' added."
 
     def remove_book(self, isbn: str) -> Tuple[bool, str]:
+        """
+        Remove a book from inventory if no copies are currently borrowed.
+
+        Returns:
+            Tuple[bool, str]: Success status and message.
+        """
         if isbn not in self.books:
             return False, "Book not found."
         if self.books[isbn].available_copies < self.books[isbn].total_copies:
             return False, "Cannot remove, some copies are borrowed."
 
         del self.books[isbn]
-        self._save_books()  # SAVE CHANGES
+        self._save_books()
         return True, "Book removed."
 
     def search_books(self, query: str) -> List[Book]:
+        """Filter books using the current search strategy."""
         return self._search_strategy.filter(list(self.books.values()), query)
 
     def get_all_books(self) -> List[Book]:
+        """Return a list of all books in the inventory."""
         return list(self.books.values())
 
     # --- Feature 2: Book Borrowing ---
     def borrow_book(self, isbn: str, borrower_name: str, borrower_id: str, days: int = 14) -> Tuple[bool, str]:
+        """
+        Create a borrow record and decrease available copies.
+
+        Returns:
+            Tuple[bool, str]: Success status and message.
+        """
         if isbn not in self.books:
             return False, "Book not found."
 
@@ -137,15 +182,22 @@ class LibraryManager:
         book.available_copies -= 1
         self.records[record_id] = record
 
-        self._save_books()  # SAVE CHANGES
-        self._save_records()  # SAVE CHANGES
+        self._save_books()
+        self._save_records()
         return True, f"Book borrowed successfully by {borrower_name}. Due: {record.due_date.strftime('%Y-%m-%d')}"
 
     def get_active_borrows(self) -> List[BorrowRecord]:
+        """Return a list of records for books not yet returned."""
         return [r for r in self.records.values() if not r.is_returned]
 
     # --- Feature 3: Input & Returning ---
     def return_book(self, record_id: str) -> Tuple[bool, str, float]:
+        """
+        Process a book return, apply fines, and update inventory.
+
+        Returns:
+            Tuple[bool, str, float]: Success status, message, and calculated fine.
+        """
         if record_id not in self.records:
             return False, "Record not found.", 0.0
 
@@ -162,14 +214,16 @@ class LibraryManager:
         if record.isbn in self.books:
             self.books[record.isbn].available_copies += 1
 
-        self._save_books()  # SAVE CHANGES
-        self._save_records()  # SAVE CHANGES
+        self._save_books()
+        self._save_records()
         return True, f"Book returned successfully.", fine
 
     def get_return_history(self) -> List[BorrowRecord]:
+        """Return a list of all returned book records."""
         return [r for r in self.records.values() if r.is_returned]
 
     def get_stats(self) -> dict:
+        """Calculate and return library statistics."""
         total_books = sum(b.total_copies for b in self.books.values())
         available = sum(b.available_copies for b in self.books.values())
         return {
