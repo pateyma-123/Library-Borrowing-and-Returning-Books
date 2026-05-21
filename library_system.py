@@ -18,21 +18,27 @@ class LibraryManager:
     """
     Manages the library's state, including books and borrowing records.
 
+    The LibraryManager acts as the central controller for the application.
+    It handles data persistence, enforces business rules for borrowing/returning,
+    and allows for strategy injection for search and fine calculation.
+
     Attributes:
-        name (str): Name of the library.
-        books (Dict[str, Book]): Dictionary of ISBN to Book objects.
-        records (Dict[str, BorrowRecord]): Dictionary of Record IDs to BorrowRecord objects.
+        name (str): The name of the library instance.
+        books (Dict[str, Book]): A mapping of ISBN strings to Book objects.
+        records (Dict[str, BorrowRecord]): A mapping of Record IDs to BorrowRecord objects.
+        books_file (str): The file path for book inventory persistence.
+        history_file (str): The file path for transaction history persistence.
     """
 
     def __init__(self, library_name: str = "Central Library", books_file: str = "books.csv",
                  history_file: str = "history.csv"):
         """
-        Initialize the LibraryManager.
+        Initialize the LibraryManager with configuration and load data.
 
         Args:
-            library_name (str): Name of the library.
-            books_file (str): Filename for storing book data.
-            history_file (str): Filename for storing transaction history.
+            library_name (str): The display name of the library. Defaults to "Central Library".
+            books_file (str): Path to the CSV file for book storage. Defaults to "books.csv".
+            history_file (str): Path to the CSV file for borrow records. Defaults to "history.csv".
         """
         self.name = library_name
         self.books: Dict[str, Book] = {}
@@ -53,7 +59,13 @@ class LibraryManager:
     # --- Internal CSV Methods ---
 
     def _load_data(self):
-        """Load books and records from CSV files if they exist."""
+        """
+        Load books and records from CSV files if they exist.
+
+        This method is called during initialization to restore state.
+        It reads 'books.csv' and 'history.csv' and populates the internal
+        dictionaries. It also adjusts the record_counter to prevent ID collisions.
+        """
         # Load Books
         if os.path.exists(self.books_file):
             with open(self.books_file, mode='r', newline='', encoding='utf-8') as file:
@@ -71,12 +83,19 @@ class LibraryManager:
                     self.records[record.record_id] = record
 
                     # Update counter to prevent duplicate IDs
-                    record_num = int(record.record_id.replace("BR", ""))
-                    if record_num > self.record_counter:
-                        self.record_counter = record_num
+                    try:
+                        record_num = int(record.record_id.replace("BR", ""))
+                        if record_num > self.record_counter:
+                            self.record_counter = record_num
+                    except ValueError:
+                        pass # Handle legacy or malformed IDs gracefully
 
     def _save_books(self):
-        """Save current book inventory to CSV."""
+        """
+        Persist the current book inventory to the CSV file.
+
+        Overwrites the existing books file with the current state of self.books.
+        """
         with open(self.books_file, mode='w', newline='', encoding='utf-8') as file:
             fieldnames = ['isbn', 'title', 'author', 'publication', 'year', 'category', 'total_copies',
                           'available_copies']
@@ -86,7 +105,11 @@ class LibraryManager:
                 writer.writerow(book.to_dict())
 
     def _save_records(self):
-        """Save current borrow records to CSV."""
+        """
+        Persist the current borrow records to the CSV file.
+
+        Overwrites the existing history file with the current state of self.records.
+        """
         with open(self.history_file, mode='w', newline='', encoding='utf-8') as file:
             fieldnames = ['record_id', 'isbn', 'book_title', 'borrower_name', 'borrower_id', 'borrow_date', 'due_date',
                           'return_date', 'is_returned']
@@ -95,140 +118,4 @@ class LibraryManager:
             for record in self.records.values():
                 writer.writerow(record.to_dict())
 
-    # --- Strategy Setters ---
-    def set_fine_strategy(self, strategy: FineStrategy):
-        """Set the strategy for calculating fines."""
-        self._fine_strategy = strategy
-
-    def set_search_strategy(self, strategy: SearchStrategy):
-        """Set the strategy for searching books."""
-        self._search_strategy = strategy
-
-    # --- Feature 1: Book Inventory ---
-    def add_book(self, isbn: str, title: str, author: str, publication: str, year: int, category: str,
-                 copies: int = 1) -> Tuple[bool, str]:
-        """
-        Add a new book or update existing copies.
-
-        Returns:
-            Tuple[bool, str]: Success status and message.
-        """
-        if not all([isbn, title, author, publication, year]):
-            return False, "All fields are required."
-
-        if isbn in self.books:
-            self.books[isbn].total_copies += copies
-            self.books[isbn].available_copies += copies
-            self._save_books()
-            return True, f"Updated copies for '{title}'."
-
-        self.books[isbn] = Book(isbn, title, author, publication, year, category, copies, copies)
-        self._save_books()
-        return True, f"Book '{title}' added."
-
-    def remove_book(self, isbn: str) -> Tuple[bool, str]:
-        """
-        Remove a book from inventory if no copies are currently borrowed.
-
-        Returns:
-            Tuple[bool, str]: Success status and message.
-        """
-        if isbn not in self.books:
-            return False, "Book not found."
-        if self.books[isbn].available_copies < self.books[isbn].total_copies:
-            return False, "Cannot remove, some copies are borrowed."
-
-        del self.books[isbn]
-        self._save_books()
-        return True, "Book removed."
-
-    def search_books(self, query: str) -> List[Book]:
-        """Filter books using the current search strategy."""
-        return self._search_strategy.filter(list(self.books.values()), query)
-
-    def get_all_books(self) -> List[Book]:
-        """Return a list of all books in the inventory."""
-        return list(self.books.values())
-
-    # --- Feature 2: Book Borrowing ---
-    def borrow_book(self, isbn: str, borrower_name: str, borrower_id: str, days: int = 14) -> Tuple[bool, str]:
-        """
-        Create a borrow record and decrease available copies.
-
-        Returns:
-            Tuple[bool, str]: Success status and message.
-        """
-        if isbn not in self.books:
-            return False, "Book not found."
-
-        book = self.books[isbn]
-        if book.available_copies < 1:
-            return False, "No copies available."
-
-        self.record_counter += 1
-        record_id = f"BR{self.record_counter:04d}"
-        now = datetime.now()
-
-        record = BorrowRecord(
-            record_id=record_id,
-            isbn=isbn,
-            book_title=book.title,
-            borrower_name=borrower_name,
-            borrower_id=borrower_id,
-            borrow_date=now,
-            due_date=now + timedelta(days=days)
-        )
-
-        book.available_copies -= 1
-        self.records[record_id] = record
-
-        self._save_books()
-        self._save_records()
-        return True, f"Book borrowed successfully by {borrower_name}. Due: {record.due_date.strftime('%Y-%m-%d')}"
-
-    def get_active_borrows(self) -> List[BorrowRecord]:
-        """Return a list of records for books not yet returned."""
-        return [r for r in self.records.values() if not r.is_returned]
-
-    # --- Feature 3: Input & Returning ---
-    def return_book(self, record_id: str) -> Tuple[bool, str, float]:
-        """
-        Process a book return, apply fines, and update inventory.
-
-        Returns:
-            Tuple[bool, str, float]: Success status, message, and calculated fine.
-        """
-        if record_id not in self.records:
-            return False, "Record not found.", 0.0
-
-        record = self.records[record_id]
-        if record.is_returned:
-            return False, "Book already returned.", 0.0
-
-        return_date = datetime.now()
-        record.is_returned = True
-        record.return_date = return_date
-
-        fine = self._fine_strategy.calculate(record.due_date, return_date)
-
-        if record.isbn in self.books:
-            self.books[record.isbn].available_copies += 1
-
-        self._save_books()
-        self._save_records()
-        return True, f"Book returned successfully.", fine
-
-    def get_return_history(self) -> List[BorrowRecord]:
-        """Return a list of all returned book records."""
-        return [r for r in self.records.values() if r.is_returned]
-
-    def get_stats(self) -> dict:
-        """Calculate and return library statistics."""
-        total_books = sum(b.total_copies for b in self.books.values())
-        available = sum(b.available_copies for b in self.books.values())
-        return {
-            "total_titles": len(self.books),
-            "total_copies": total_books,
-            "available_copies": available,
-            "borrowed_copies": total_books - available
-        }
+    # --- Strategy Se
