@@ -1,164 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ library.name }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ library.name }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-
 <div class="container">
-    <header>
-        <h1>📚 {{ library.name }}</h1>
-        <p>Inventory • Borrowing • Returning</p>
-    </header>
-
-    {% if message %}
-        <div class="alert success">✓ {{ message }}</div>
-    {% endif %}
-    {% if error %}
-        <div class="alert error">✖ {{ error }}</div>
-    {% endif %}
-
-    <div class="main-layout">
-        <div class="card section-inventory">
-            <h2>Book Inventory</h2>
-
-            <details>
-                <summary>+ Add New Book</summary>
-                <form action="/inventory/add" method="POST" class="form-grid">
-                    <input type="text" name="title" placeholder="Title" required>
-                    <input type="text" name="author" placeholder="Author" required>
-                    <input type="text" name="publication" placeholder="Publisher" required>
-                    <input type="number" name="year" placeholder="Year" required>
-                    <input type="text" name="isbn" placeholder="ISBN" required>
-                    <input type="text" name="category" placeholder="Category" required>
-                    <input type="number" name="copies" value="1" min="1">
-                    <button type="submit" class="btn primary">Add</button>
-                </form>
-            </details>
-
-            <div class="search-bar">
-                <form action="/search" method="GET">
-                    <select name="field">
-                        <option value="title">Title</option>
-                        <option value="author">Author</option>
-                    </select>
-                    <input type="text" name="q" placeholder="Search..." value="{{ search_query or '' }}">
-                    <button type="submit">Search</button>
-                </form>
-            </div>
-
-            <div class="table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Book</th>
-                            <th>Publication</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for book in books %}
-                        <tr>
-                            <td>
-                                <strong>{{ book.title }}</strong><br>
-                                <span>{{ book.author }}</span>
-                            </td>
-                            <td>
-                                {{ book.publication }}<br>
-                                <small>{{ book.year }}</small>
-                            </td>
-                            <td>
-                                {% if book.available_copies > 0 %}
-                                    <span class="status available">{{ book.available_copies }} Avail</span>
-                                {% else %}
-                                    <span class="status unavailable">Borrowed</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div style="display:flex; gap:5px;">
-                                    {% if book.available_copies > 0 %}
-                                        <a href="/?borrow_isbn={{ book.isbn }}" class="btn success sm">Borrow</a>
-                                    {% else %}
-                                        <button class="btn sm" disabled>Unavailable</button>
-                                    {% endif %}
-                                    <a href="/inventory/remove/{{ book.isbn }}" class="btn danger sm" onclick="return confirm('Remove?')">Delete</a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" style="text-align:center; padding:30px; color:#999;">
-                                No books. Click "+Add New Book" to start.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="sidebar">
-            <div class="card section-borrow">
-                <h2>Book Borrowing</h2>
-
-                {% if selected_book %}
-                    <div class="selected-book">
-                        <p>📖 <strong>{{ selected_book.title }}</strong></p>
-                        <form action="/borrow" method="POST">
-                            <input type="hidden" name="isbn" value="{{ selected_book.isbn }}">
-                            <label>Borrower Name</label>
-                            <input type="text" name="borrower_name" placeholder="Name" required>
-                            <label>Borrower ID</label>
-                            <input type="text" name="borrower_id" placeholder="ID" required>
-                            <label>Return Date</label>
-                            <input type="date" name="due_date" min="{{ today_date }}" required>
-                            <button type="submit" class="btn primary full">Confirm</button>
-                        </form>
-                    </div>
-                {% else %}
-                    <div class="instruction">👈 Select a book to borrow</div>
-                {% endif %}
-            </div>
-
-            <div class="card section-return">
-                <h2>Returns</h2>
-
-                <h3>Active Borrows</h3>
-                <div class="list-group">
-                    {% for record in active_borrows %}
-                    <div class="list-item">
-                        <div class="info">
-                            <strong>{{ record.book_title }}</strong><br>
-                            <small>{{ record.borrower_name }}</small><br>
-                            <small>Due: {{ record.due_date.strftime('%Y-%m-%d') }}</small>
-                        </div>
-                        <a href="/return/{{ record.record_id }}" class="btn warning sm" onclick="return confirm('Return?')">Return</a>
-                    </div>
-                    {% else %}
-                    <p class="empty-text">No active borrows</p>
-                    {% endfor %}
-                </div>
-
-                <h3>History</h3>
-                <div class="list-group">
-                    {% for record in history %}
-                    <div class="list-item">
-                        <strong>{{ record.book_title }}</strong><br>
-                        <small>{{ record.borrower_name }}</small>
-                        <span class="status returned">Returned</span>
-                    </div>
-                    {% else %}
-                    <p class="empty-text">No return history</p>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-    </div>
+<header>
+<h1>📚 {{ library.name }}</h1>
+<p>Inventory • Borrowing • Returning</p>
+</header>
+{% if message %}<div class="alert success">✓ {{ message }}</div>{% endif %}
+{% if error %}<div class="alert error">✖ {{ error }}</div>{% endif %}
+<div class="main-layout">
+<div class="card">
+<h2>Books</h2>
+<details><summary>+ Add</summary>
+<form action="/inventory/add" method="POST">
+<input type="text" name="title" placeholder="Title" required>
+<input type="text" name="author" placeholder="Author" required>
+<input type="text" name="publication" placeholder="Publisher" required>
+<input type="number" name="year" placeholder="Year" required>
+<input type="text" name="isbn" placeholder="ISBN" required>
+<input type="text" name="category" placeholder="Category" required>
+<input type="number" name="copies" value="1" min="1">
+<button type="submit">Add</button>
+</form>
+</details>
+<div class="search-bar">
+<form action="/search" method="GET">
+<select name="field"><option value="title">Title</option><option value="author">Author</option></select>
+<input type="text" name="q" placeholder="Search" value="{{ search_query or '' }}">
+<button type="submit">Go</button>
+</form>
 </div>
-
+<table>
+<thead><tr><th>Book</th><th>Info</th><th>Status</th><th>Action</th></tr></thead>
+<tbody>
+{% for book in books %}
+<tr>
+<td><strong>{{ book.title }}</strong><br>{{ book.author }}</td>
+<td>{{ book.publication }}<br>{{ book.year }}</td>
+<td>{% if book.available_copies > 0 %}<span class="avail">{{ book.available_copies }} Avail</span>{% else %}<span class="unavail">Borrowed</span>{% endif %}</td>
+<td>{% if book.available_copies > 0 %}<a href="/?borrow_isbn={{ book.isbn }}" class="btn">Borrow</a>{% else %}<button disabled>Unavail</button>{% endif %}<a href="/inventory/remove/{{ book.isbn }}" class="btn-del" onclick="return confirm('Remove?')">Delete</a></td>
+</tr>
+{% else %}
+<tr><td colspan="4">No books. Add one to start.</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+<div class="sidebar">
+<div class="card">
+<h2>Borrow</h2>
+{% if selected_book %}
+<p>📖 <strong>{{ selected_book.title }}</strong></p>
+<form action="/borrow" method="POST">
+<input type="hidden" name="isbn" value="{{ selected_book.isbn }}">
+<label>Name</label><input type="text" name="borrower_name" required>
+<label>ID</label><input type="text" name="borrower_id" required>
+<label>Return Date</label><input type="date" name="due_date" min="{{ today_date }}" required>
+<button type="submit">Borrow</button>
+</form>
+{% else %}
+<p>Select a book to borrow</p>
+{% endif %}
+</div>
+<div class="card">
+<h2>Returns</h2>
+<h3>Active</h3>
+{% for record in active_borrows %}
+<div class="item"><strong>{{ record.book_title }}</strong><br><small>{{ record.borrower_name }}</small><br><small>Due: {{ record.due_date.strftime('%Y-%m-%d') }}</small><a href="/return/{{ record.record_id }}" class="btn-ret" onclick="return confirm('Return?')">Return</a></div>
+{% else %}
+<p>No active borrows</p>
+{% endfor %}
+<h3>History</h3>
+{% for record in history %}
+<div class="item-hist"><strong>{{ record.book_title }}</strong><br><small>{{ record.borrower_name }}</small></div>
+{% else %}
+<p>No history</p>
+{% endfor %}
+</div>
+</div>
+</div>
+</div>
 </body>
 </html>
