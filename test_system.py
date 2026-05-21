@@ -1,9 +1,22 @@
-# test_system.py
 """
 Unit Tests for Library Management System.
 
-Tests cover Model creation, Strategy logic, and Library Manager functionality,
-including data persistence.
+This test suite provides comprehensive coverage for:
+- Model creation and serialization (Book, BorrowRecord)
+- Strategy implementations (fine calculation, search algorithms)
+- Library Manager functionality (add, borrow, return, search, persistence)
+- Data persistence via CSV files
+
+Test Fixtures:
+    library: Provides a clean LibraryManager instance for each test
+
+Running Tests:
+    pytest test_system.py
+    pytest test_system.py -v  (verbose output)
+    pytest test_system.py::test_specific_test  (run single test)
+
+Author: Library Management Team
+Version: 1.0
 """
 
 import pytest
@@ -16,7 +29,14 @@ from library_system import LibraryManager
 
 # ---------- Model Tests ----------
 def test_book_creation():
-    """Test that a Book object is initialized correctly."""
+    """
+    Test that a Book object is initialized correctly.
+
+    Verifies:
+    - Book attributes are set properly
+    - available_copies defaults to total_copies
+    - All required fields are present
+    """
     book = Book(isbn="123", title="Python 101", author="Guido", publication="Pearson", year=2020, category="Tech",
                 total_copies=5)
     assert book.title == "Python 101"
@@ -25,7 +45,14 @@ def test_book_creation():
 
 
 def test_borrow_record_creation():
-    """Test that a BorrowRecord object is initialized correctly."""
+    """
+    Test that a BorrowRecord object is initialized correctly.
+
+    Verifies:
+    - Record ID and borrower info are set
+    - Return status defaults to False (not yet returned)
+    - Dates are stored correctly
+    """
     now = datetime.now()
     record = BorrowRecord("BR01", "123", "PyBook", "Alice", "ID01", now, now)
     assert record.is_returned is False
@@ -33,7 +60,14 @@ def test_borrow_record_creation():
 
 # ---------- Strategy Tests ----------
 def test_standard_fine_strategy():
-    """Test that fines are calculated correctly for overdue books."""
+    """
+    Test that fines are calculated correctly for overdue books.
+
+    Test Case:
+    - Book due 2 days ago
+    - Returned today
+    - Expected fine: 2 days × $0.50 = $1.00
+    """
     strategy = StandardFineStrategy()
     due = datetime.now() - timedelta(days=2)
     ret = datetime.now()
@@ -46,8 +80,15 @@ def test_standard_fine_strategy():
 def library():
     """
     Fixture to create a clean LibraryManager instance for testing.
-    Uses separate CSV files to avoid interfering with production data.
-    Cleans up files after tests complete.
+
+    Benefits:
+    - Uses separate test CSV files to avoid interfering with production data
+    - Starts fresh for each test (setup)
+    - Cleans up test files after each test completes (teardown)
+    - Provides a library with pre-populated sample books
+
+    Yields:
+        LibraryManager: Configured library instance for testing
     """
     # Define test file names
     test_books_file = "test_books.csv"
@@ -77,20 +118,41 @@ def library():
 
 
 def test_add_book(library):
-    """Test adding books to the library inventory."""
+    """
+    Test adding books to the library inventory.
+
+    Verifies:
+    - Books are correctly added to the library
+    - Book metadata is stored accurately
+    """
     assert len(library.books) == 2
     assert library.books["111"].publication == "O'Reilly"
 
 
 def test_borrow_book_success(library):
-    """Test successfully borrowing a book reduces available copies."""
+    """
+    Test successfully borrowing a book reduces available copies.
+
+    Test Case:
+    - Book initially has 2 available copies
+    - Borrow 1 copy
+    - Verify available copies reduced to 1
+    """
     success, msg = library.borrow_book("111", "John", "STU01")
     assert success
     assert library.books["111"].available_copies == 1
 
 
 def test_return_book(library):
-    """Test returning a book restores available copies."""
+    """
+    Test returning a book restores available copies.
+
+    Test Case:
+    - Book has 2 copies initially
+    - Borrow 1 copy (reduces to 1)
+    - Return the book
+    - Verify available copies restored to 2
+    """
     library.borrow_book("111", "John", "STU01")
     record_id = list(library.records.keys())[0]
 
@@ -100,7 +162,14 @@ def test_return_book(library):
 
 
 def test_persistence(library):
-    """Test that data persists by creating a new LibraryManager instance with same files."""
+    """
+    Test that data persists across LibraryManager instances.
+
+    Simulates application restart:
+    - Create library and borrow a book
+    - Create new library instance with same data files
+    - Verify data is loaded correctly (persistence works)
+    """
     # Borrow a book
     library.borrow_book("111", "Alice", "ID001")
 
