@@ -1,4 +1,11 @@
 # models.py
+"""
+Data Models for Library System.
+
+Defines the core data structures: Book and BorrowRecord using Python dataclasses.
+Handles serialization to/from dictionaries for CSV storage.
+"""
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
@@ -6,7 +13,16 @@ from typing import Optional
 
 @dataclass
 class Book:
-    """Represents a book entity in the library."""
+    """
+    Represents a book entity in the library.
+
+    Attributes:
+        isbn (str): Unique identifier for the book.
+        title (str): Book title.
+        author (str): Book author.
+        total_copies (int): Total number of copies owned.
+        available_copies (int): Number of copies currently available.
+    """
     isbn: str
     title: str
     author: str
@@ -18,10 +34,12 @@ class Book:
     date_added: datetime = field(default_factory=datetime.now)
 
     def __post_init__(self):
+        """Initialize available_copies to total_copies if not provided."""
         if self.available_copies is None:
             self.available_copies = self.total_copies
 
     def to_dict(self) -> dict:
+        """Convert the Book object to a dictionary for CSV serialization."""
         return {
             "isbn": self.isbn,
             "title": self.title,
@@ -50,7 +68,14 @@ class Book:
 
 @dataclass
 class BorrowRecord:
-    """Represents a transaction record for a borrowed book."""
+    """
+    Represents a transaction record for a borrowed book.
+
+    Attributes:
+        record_id (str): Unique ID for the transaction.
+        is_returned (bool): Status of the return.
+        due_date (datetime): Date the book should be returned.
+    """
     record_id: str
     isbn: str
     book_title: str
@@ -62,6 +87,7 @@ class BorrowRecord:
     is_returned: bool = False
 
     def to_dict(self) -> dict:
+        """Convert the BorrowRecord object to a dictionary for CSV serialization."""
         return {
             "record_id": self.record_id,
             "isbn": self.isbn,
