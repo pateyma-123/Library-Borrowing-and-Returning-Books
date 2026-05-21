@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ library.name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+    <header><h1>{{ library.name }}</h1><p>Inventory • Borrowing • Returning</p></header>
+    
+    {% if message %}<div class="alert success">{{ message }}</div>{% endif %}
+    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+
+    <div class="main-layout">
+        <!-- Inventory -->
+        <div class="card">
+            <h2>Inventory</h2>
+            <details><summary>+ Add Book</summary>
+                <form action="/inventory/add" method="POST" class="form-grid">
+                    <input type="text" name="title" placeholder="Title" required>
+                    <input type="text" name="author" placeholder="Author" required>
+                    <input type="text" name="publication" placeholder="Publication" required>
+                    <input type="number" name="year" placeholder="Year" required>
+                    <input type="text" name="isbn" placeholder="ISBN" required>
+                    <input type="text" name="category" placeholder="Category" required>
+                    <input type="number" name="copies" value="1" min="1">
+                    <button class="btn primary">Add</button>
+                </form>
+            </details>
+
+            <div class="search-bar">
+                <form action="/search" method="GET">
+                    <select name="field"><option value="title">Title</option><option value="author">Author</option></select>
+                    <input type="text" name="q" value="{{ search_query or '' }}">
+                    <button class="btn primary">Search</button>
+                </form>
+            </div>
+
+            <table>
+                <thead><tr><th>Book</th><th>Info</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                {% for book in books %}
+                    <tr>
+                        <td><strong>{{ book.title }}</strong><br><small>{{ book.author }}</small></td>
+                        <td>{{ book.publication }} ({{ book.year }})</td>
+                        <td>{% if book.available_copies > 0 %}<span class="status ok">{{ book.available_copies }} In</span>{% else %}<span class="status out">Out</span>{% endif %}</td>
+                        <td>
+                            {% if book.available_copies > 0 %}<a href="/?borrow_isbn={{ book.isbn }}" class="btn success sm">Borrow</a>{% endif %}
+                            <a href="/inventory/remove/{{ book.isbn }}" class="btn danger sm" onclick="return confirm('Delete?')">Del</a>
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="4">No books.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="card">
+                <h2>Borrowing</h2>
+                {% if selected_book %}
+                    <p><strong>{{ selected_book.title }}</strong></p>
+                    <form action="/borrow" method="POST">
+                        <input type="hidden" name="isbn" value="{{ selected_book.isbn }}">
+                        <input type="text" name="borrower_name" placeholder="Name" required>
+                        <input type="text" name="borrower_id" placeholder="ID" required>
+                        <input type="date" name="due_date" min="{{ today_date }}" required>
+                        <button class="btn primary full">Confirm</button>
+                    </form>
+                {% else %}<p class="info">Select a book to borrow.</p>{% endif %}
+            </div>
+
+            <div class="card">
+                <h2>Active & History</h2>
+                <h3>Active</h3>
+                <div class="list">
+                {% for r in active_borrows %}
+                    <div class="item">
+                        <span>{{ r.book_title }} ({{ r.borrower_name }})</span>
+                        <a href="/return/{{ r.record_id }}" class="btn warn sm">Return</a>
+                    </div>
+                {% else %}<p class="empty">None.</p>{% endfor %}
+                </div>
+
+                <h3>History</h3>
+                <div class="list">
+                {% for r in history %}
+                    <div class="item returned"><span>{{ r.book_title }}</span> <span class="status">Done</span></div>
+                {% else %}<p class="empty">None.</p>{% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
